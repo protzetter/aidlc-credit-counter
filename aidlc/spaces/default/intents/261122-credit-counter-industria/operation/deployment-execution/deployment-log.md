@@ -1,6 +1,6 @@
 # Deployment Log
 
-Release v1.0.0 of `aidlc-stage-credits`. It follows the approved pipeline in `cd-config.md` and the steps in `deployment-strategy.md`, and the person's answer in `deployment-execution-questions.md` (Q1: the person creates the GitHub repository and the `release` environment; I set up git, add the release workflow, commit, and give the push and tag commands). Inputs: Build and Test results in `test-results.md` (40 of 40 passing at that stage).
+Release v1.0.0 of `aidlc-stage-credits`. It follows the approved pipeline in `cd-config.md` and the steps in `deployment-strategy.md`, and the person's answer in `deployment-execution-questions.md` (Q1: the person creates the GitHub repository and the `release` environment; I set up git, add the release workflow, commit, and give the push and tag commands). Inputs: Build and Test results (`build-test-results`, the file `test-results.md`; 40 of 40 passing at that stage).
 
 ## Fix Before Release
 
