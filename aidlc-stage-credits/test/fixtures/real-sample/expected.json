@@ -1,0 +1,14 @@
+{
+  "confirmed_by_hand": true,
+  "stages": [
+    { "stage": "workspace-scaffold", "credits": 0 },
+    { "stage": "workspace-detection", "credits": 0 },
+    { "stage": "state-init", "credits": 0 },
+    { "stage": "intent-capture", "credits": 15.674 },
+    { "stage": "requirements-analysis", "credits": 11.751 },
+    { "stage": "code-generation", "credits": 21.226 },
+    { "stage": "build-and-test", "credits": 12.788 }
+  ],
+  "outside": 103.8,
+  "total": 165.238
+}

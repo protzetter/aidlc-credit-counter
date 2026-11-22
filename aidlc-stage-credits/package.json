@@ -1,0 +1,22 @@
+{
+  "name": "aidlc-stage-credits",
+  "version": "1.0.0",
+  "description": "Reports Kiro credits used per AI-DLC stage (read-only apart from an export you ask for). Needs Node 22 or newer.",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "aidlc-stage-credits": "bin/aidlc-stage-credits.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "bin",
+    "src",
+    "SKILL.md",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test"
+  }
+}

@@ -1,0 +1,1 @@
+"Industrialize the aidlc-stage-credits proof of concept (it reports Kiro credits per AI-DLC stage). Needed: packaging as an installable Kiro extension, a team view (shared report for the team lead or budget owner), repeatable checks that the figures match what Kiro reports, tests including the script error paths, and CI."

@@ -1,0 +1,9 @@
+[
+{"stage":"workspace-scaffold","start":"2026-11-22T08:48:41.000Z","end":"2026-11-22T08:48:41.000Z"},
+{"stage":"workspace-detection","start":"2026-11-22T08:48:41.000Z","end":"2026-11-22T08:48:41.000Z"},
+{"stage":"state-init","start":"2026-11-22T08:48:41.000Z","end":"2026-11-22T08:48:41.000Z"},
+{"stage":"intent-capture","start":"2026-11-22T08:48:41.000Z","end":"2026-11-22T08:54:28.000Z"},
+{"stage":"requirements-analysis","start":"2026-11-22T08:54:28.000Z","end":"2026-11-22T09:06:58.000Z"},
+{"stage":"code-generation","start":"2026-11-22T09:06:58.000Z","end":"2026-11-22T09:21:37.000Z"},
+{"stage":"build-and-test","start":"2026-11-22T09:21:37.000Z","end":"2026-11-22T09:29:12.000Z"}
+]

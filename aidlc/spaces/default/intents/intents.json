@@ -1,0 +1,18 @@
+[
+  {
+    "uuid": "01a20271-7df8-740c-b740-34b16d20219f",
+    "slug": "stage-credit-counter",
+    "dirName": "261122-stage-credit-counter",
+    "scope": "poc",
+    "status": "complete",
+    "request": "08aa0b6e"
+  },
+  {
+    "uuid": "01a202b4-df15-7348-980b-bc2a8e0b24c3",
+    "slug": "credit-counter-industria",
+    "dirName": "261122-credit-counter-industria",
+    "scope": "refactor",
+    "status": "in-flight",
+    "request": "dc81855d"
+  }
+]

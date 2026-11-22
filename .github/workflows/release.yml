@@ -1,0 +1,51 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: aidlc-stage-credits
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Tag matches package version
+        run: test "v$(node -p "require('./package.json').version")" = "${GITHUB_REF_NAME}"
+      - run: npm test
+
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    # A person approves here: the "release" environment has a required reviewer.
+    environment: release
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: aidlc-stage-credits
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm pack
+      - name: Smoke test the packed tarball
+        run: |
+          mkdir ../smoke
+          cd ../smoke
+          npm init -y > /dev/null
+          npm install ../aidlc-stage-credits/aidlc-stage-credits-*.tgz
+          npx aidlc-stage-credits --help
+      - name: Create the GitHub release
+        run: gh release create "${GITHUB_REF_NAME}" aidlc-stage-credits-*.tgz --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
