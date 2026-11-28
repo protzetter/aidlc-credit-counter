@@ -13,7 +13,7 @@ node aidlc-stage-credits/bin/aidlc-stage-credits.mjs
 
 (When the package is installed, the command is `aidlc-stage-credits`.)
 
-Show the output as is: do not reword, round or recompute it. If the command exits with an error message, show that message and stop. The report only reads files and changes nothing.
+Show the output as is: do not reword, round or recompute it. It covers all intents of the project; to look at one or two, add `--intent <name>` (repeatable), for example `aidlc-stage-credits --intent 261128-multi-intent-credits`. If the command exits with an error message, show that message and stop. A warning about an intent without an audit file is part of the output: show it. The report only reads files and changes nothing.
 
 Two more actions, only when the person asks for them:
 

@@ -14,5 +14,13 @@
     "scope": "refactor",
     "status": "complete",
     "request": "dc81855d"
+  },
+  {
+    "uuid": "01a22270-2e26-7e05-a44e-e9ad15514dcc",
+    "slug": "multi-intent-credits",
+    "dirName": "261128-multi-intent-credits",
+    "scope": "express",
+    "status": "in-flight",
+    "request": "202cf03f"
   }
 ]

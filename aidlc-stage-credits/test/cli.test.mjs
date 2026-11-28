@@ -21,7 +21,8 @@ function project() {
   put(join(root, 'aidlc', 'spaces', 'default', 'intents', 'active-intent'), 'i-1');
   put(
     join(root, 'aidlc', 'spaces', 'default', 'intents', 'i-1', 'audit', 'a.md'),
-    '**Timestamp**: 2026-01-01T10:00:00Z\n**Event**: STAGE_STARTED\n**Stage**: alpha\n',
+    '**Timestamp**: 2026-01-01T10:00:00Z\n**Event**: STAGE_STARTED\n**Stage**: alpha\n' +
+      '\n---\n**Timestamp**: 2026-01-01T10:10:00Z\n**Event**: STAGE_COMPLETED\n**Stage**: alpha\n',
   );
   put(join(sessionsRoot, 'ws', 's1', 'session.json'), JSON.stringify({ workspacePaths: [root] }));
   put(
@@ -40,10 +41,41 @@ test('BR6.1: no action means report, and its exit code is passed through', () =>
     const env = { cwd: p.root, sessionsRoot: p.sessionsRoot, now: NOW };
     const ok = main([], env);
     assert.equal(ok.exitCode, 0);
-    assert.match(ok.stdout, /alpha\s+2\.000/);
+    assert.match(ok.stdout, /^Intents: 1 /);
+    assert.match(ok.stdout, /i-1\s+alpha\s+2\.000/);
     const missing = main(['report'], { ...env, sessionsRoot: join(p.base, 'nope') });
     assert.equal(missing.exitCode, 1);
     assert.match(missing.stderr, /^No Kiro data found/);
+  } finally {
+    p.cleanup();
+  }
+});
+
+test('FR3/FR4: --intent and --intent=<name> narrow the report, repeat, and unknown names exit 1', () => {
+  const p = project();
+  try {
+    put(
+      join(p.root, 'aidlc', 'spaces', 'default', 'intents', 'i-2', 'audit', 'a.md'),
+      '**Timestamp**: 2026-01-01T10:20:00Z\n**Event**: STAGE_STARTED\n**Stage**: beta\n' +
+        '\n---\n**Timestamp**: 2026-01-01T10:30:00Z\n**Event**: STAGE_COMPLETED\n**Stage**: beta\n',
+    );
+    const env = { cwd: p.root, sessionsRoot: p.sessionsRoot, now: NOW };
+    const all = main([], env);
+    assert.match(all.stdout, /^Intents: 2 /);
+    for (const argv of [['--intent', 'i-2'], ['report', '--intent', 'i-2'], ['report', '--intent=i-2']]) {
+      const r = main(argv, env);
+      assert.equal(r.exitCode, 0, argv.join(' '));
+      assert.match(r.stdout, /^Intents: 1 /);
+      assert.doesNotMatch(r.stdout, /alpha/);
+      assert.match(r.stdout, /i-2\s+beta\s+0\.000/);
+    }
+    const two = main(['report', '--intent', 'i-1', '--intent=i-2'], env);
+    assert.match(two.stdout, /^Intents: 2 /);
+    const bad = main(['report', '--intent', 'nope'], env);
+    assert.equal(bad.exitCode, 1);
+    assert.match(bad.stderr, /Unknown intent: nope\. Intents that exist: i-1, i-2\./);
+    assert.equal(main(['report', '--intent'], env).exitCode, 1);
+    assert.equal(main(['report', '--wat'], env).exitCode, 1);
   } finally {
     p.cleanup();
   }
@@ -85,7 +117,7 @@ test('BR6.1: export reads --person and --force; combine passes its files and exi
 test('FR1.2: the tool version comes from package.json', () => {
   const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
   assert.equal(toolVersion(), pkg.version);
-  assert.equal(pkg.version, '1.0.0');
+  assert.equal(pkg.version, '1.1.0');
   assert.equal(pkg.engines.node, '>=22');
   assert.equal(pkg.bin['aidlc-stage-credits'], 'bin/aidlc-stage-credits.mjs');
   assert.ok(pkg.files.includes('SKILL.md') && pkg.files.includes('README.md'));

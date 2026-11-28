@@ -15,12 +15,12 @@ or run it without installing: `node aidlc-stage-credits/bin/aidlc-stage-credits.
 ## Commands
 
 ```
-aidlc-stage-credits [report]
+aidlc-stage-credits [report] [--intent <name>]...
 aidlc-stage-credits export <file.json|file.csv> [--person <name>] [--force]
 aidlc-stage-credits combine <file>...
 ```
 
-- `report` (the default): prints the credits per stage for the active intent of your own run. Writes nothing.
+- `report` (the default): prints one combined table (intent, stage, credits) for all intents of the active space, then one `outside any stage` line and the TOTAL. `--intent <name>` (or `--intent=<name>`, repeatable) narrows it to the named intent folders; an unknown name stops with the list of intents that exist. An intent with no audit file is left out with a warning on stderr. No active intent is needed. Writes nothing.
 - `export <file>`: prints the same table and writes one file with your figures. The format follows the file ending (`.json` or `.csv`). `--person` is the name shown in a team report (default: your computer's user name). An existing file is not replaced unless you give `--force`. Credits are written at full precision.
 - `combine <file>...`: reads export files from several people and prints one section per intent with credits per stage per person and a team total. For each person and intent only the newest export counts; older ones are listed as ignored. A file that cannot be used is skipped with a warning. Writes nothing.
 
@@ -31,10 +31,10 @@ Exit codes: `0` ok; `1` an error stopped the run (missing data, unknown action, 
 ## What it reads
 
 - `~/.kiro/sessions/<workspace-id>/<session-id>/session.json` (to pick sessions whose `workspacePaths` equal the project root) and `messages.jsonl` (`usage_summary` records: timestamp plus `promptTurnSummaries[].usage` where unit is `credit`).
-- `aidlc/active-space` (default space: `default`) and `aidlc/spaces/<space>/intents/active-intent`.
-- The active intent's audit files under `aidlc/spaces/<space>/intents/<intent>/audit/*.md` (`STAGE_STARTED` / `STAGE_COMPLETED` rows).
+- `aidlc/active-space` (default space: `default`), `aidlc/spaces/<space>/intents/intents.json` (the `dirName` of each intent; without it, the intent folders, skipping names that start with a dot) and `aidlc/spaces/<space>/intents/active-intent` (only `export` uses it).
+- The audit files of each intent under `aidlc/spaces/<space>/intents/<intent>/audit/*.md` (`STAGE_STARTED` / `STAGE_COMPLETED` rows).
 
-Each credit record goes to the stage window that contains its timestamp. Credits outside every window appear on the "outside a stage" line.
+Each credit record goes to the stage window that contains its timestamp, across all selected intents (the latest-starting window wins on overlap). Credits outside every window appear once on the "outside any stage" line. In the report, a stage still open at the end of an intent's audit ends at that audit's last time.
 
 ## Export format
 

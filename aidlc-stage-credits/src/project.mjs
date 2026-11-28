@@ -82,6 +82,51 @@ export function readAudit(projectRoot, space, intent) {
 }
 
 /**
+ * The intents of a space, in order: the `dirName` of each entry of `intents.json`; when that file is
+ * missing or unreadable, the intent folders (names starting with a dot are skipped), sorted by name.
+ * @returns {string[]}
+ */
+export function listIntents(projectRoot, space) {
+  const dir = intentsDir(projectRoot, space);
+  try {
+    const list = JSON.parse(readFileSync(join(dir, 'intents.json'), 'utf8'));
+    if (Array.isArray(list)) {
+      const names = [];
+      for (const e of list) {
+        const n = e && typeof e.dirName === 'string' ? e.dirName.trim() : '';
+        if (n !== '' && !names.includes(n)) names.push(n);
+      }
+      return names;
+    }
+  } catch {
+    // missing or unreadable: fall back to the folders
+  }
+  try {
+    return readdirSync(dir, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && !e.name.startsWith('.'))
+      .map((e) => e.name)
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Audit text of each named intent. An intent with no audit file goes to `missing`.
+ * @returns {{audits:{intent:string,text:string}[], missing:string[]}}
+ */
+export function readIntentAudits(projectRoot, space, names) {
+  const audits = [];
+  const missing = [];
+  for (const intent of names) {
+    const a = readAudit(projectRoot, space, intent);
+    if (a.files.length === 0) missing.push(intent);
+    else audits.push({ intent, text: a.text });
+  }
+  return { audits, missing };
+}
+
+/**
  * Kiro sessions of this project: `<sessionsRoot>/<workspace>/<session>/session.json` whose
  * `workspacePaths` or `rootPaths` include the project root (BR1.4). Kiro keeps the path a chat
  * started in under `workspacePaths` and adds later paths, such as a renamed project folder, only to

@@ -31,6 +31,7 @@ function fixture(parts = {}) {
   mkdirSync(join(root, 'aidlc'), { recursive: true });
   if (!parts.noIntent) put(join(root, 'aidlc', 'spaces', 'default', 'intents', 'active-intent'), 'i-1\n');
   if (!parts.noAudit) put(join(root, 'aidlc', 'spaces', 'default', 'intents', 'i-1', 'audit', 'a.md'), AUDIT);
+  else mkdirSync(join(root, 'aidlc', 'spaces', 'default', 'intents', 'i-1', 'audit'), { recursive: true });
   if (!parts.noSessionsRoot) {
     mkdirSync(sessionsRoot, { recursive: true });
     if (!parts.noSession) {
@@ -58,16 +59,97 @@ function snapshot(dir) {
   return out;
 }
 
-test('FR1.1: report prints the per-stage table and exits 0', () => {
+test('FR1: report prints one combined table for all intents and exits 0', () => {
   const f = fixture();
   try {
-    const r = runReport({ startDir: f.root, sessionsRoot: f.sessionsRoot, now: NOW });
+    const r = runReport({ startDir: f.root, sessionsRoot: f.sessionsRoot });
     assert.equal(r.exitCode, 0);
-    assert.match(r.stdout, /^Intent: i-1 {3}Sessions: 1 {3}Credit records: 3\n/);
-    assert.match(r.stdout, /alpha\s+1\.500/);
-    assert.match(r.stdout, /beta\s+2\.000/);
-    assert.match(r.stdout, /outside a stage\s+0\.250/);
+    assert.equal(r.stderr, '');
+    assert.match(r.stdout, /^Intents: 1 {3}Sessions: 1 {3}Credit records: 3\n/);
+    assert.match(r.stdout, /i-1\s+alpha\s+1\.500/);
+    // beta is still open: with no `now`, it ends at the audit's last time, so its record is outside.
+    assert.match(r.stdout, /i-1\s+beta\s+0\.000/);
+    assert.match(r.stdout, /outside any stage\s+2\.250/);
     assert.match(r.stdout, /TOTAL\s+3\.750/);
+  } finally {
+    f.cleanup();
+  }
+});
+
+/** Adds a second intent with its own audit and records on top of the fixture. */
+function addSecondIntent(f, { withAudit = true } = {}) {
+  const dir = join(f.root, 'aidlc', 'spaces', 'default', 'intents', 'i-2');
+  mkdirSync(dir, { recursive: true });
+  if (withAudit) {
+    put(
+      join(dir, 'audit', 'a.md'),
+      [
+        '**Timestamp**: 2026-01-01T10:25:00Z\n**Event**: STAGE_STARTED\n**Stage**: gamma\n',
+        '**Timestamp**: 2026-01-01T10:40:00Z\n**Event**: STAGE_COMPLETED\n**Stage**: gamma\n',
+      ].join('\n---\n'),
+    );
+  }
+}
+
+test('FR1/FR2: all intents by default; --intent narrows; the intents option is repeatable', () => {
+  const f = fixture();
+  try {
+    addSecondIntent(f);
+    const all = runReport({ startDir: f.root, sessionsRoot: f.sessionsRoot });
+    assert.match(all.stdout, /^Intents: 2 /);
+    assert.match(all.stdout, /i-1\s+alpha\s+1\.500/);
+    assert.match(all.stdout, /i-2\s+gamma\s+2\.000/);
+    assert.match(all.stdout, /outside any stage\s+0\.250/);
+    assert.match(all.stdout, /TOTAL\s+3\.750/);
+
+    const one = runReport({ startDir: f.root, sessionsRoot: f.sessionsRoot, intents: ['i-2'] });
+    assert.match(one.stdout, /^Intents: 1 /);
+    assert.doesNotMatch(one.stdout, /i-1/);
+    assert.match(one.stdout, /i-2\s+gamma\s+2\.000/);
+
+    const both = runReport({ startDir: f.root, sessionsRoot: f.sessionsRoot, intents: ['i-2', 'i-1'] });
+    assert.match(both.stdout, /^Intents: 2 /);
+    // the listed order of the intents, not the order of the options
+    assert.ok(both.stdout.indexOf('i-1') < both.stdout.indexOf('i-2'));
+  } finally {
+    f.cleanup();
+  }
+});
+
+test('FR1.2: an unknown intent stops with its name and the intents that exist, exit 1', () => {
+  const f = fixture();
+  try {
+    addSecondIntent(f);
+    const r = runReport({ startDir: f.root, sessionsRoot: f.sessionsRoot, intents: ['nope'] });
+    assert.equal(r.exitCode, 1);
+    assert.equal(r.stdout, '');
+    assert.equal(r.stderr, 'Unknown intent: nope. Intents that exist: i-1, i-2.');
+  } finally {
+    f.cleanup();
+  }
+});
+
+test('FR1.3: an intent with no audit file is left out with one warning; exit stays 0', () => {
+  const f = fixture();
+  try {
+    addSecondIntent(f, { withAudit: false });
+    const r = runReport({ startDir: f.root, sessionsRoot: f.sessionsRoot });
+    assert.equal(r.exitCode, 0);
+    assert.equal(r.stderr, 'Warning: intent i-2 has no audit file and is left out.');
+    assert.match(r.stdout, /^Intents: 1 /);
+    assert.doesNotMatch(r.stdout, /i-2/);
+  } finally {
+    f.cleanup();
+  }
+});
+
+test('FR1: no intent at all stops with a message and exit 1', () => {
+  const f = fixture({ noAudit: true });
+  try {
+    rmSync(join(f.root, 'aidlc', 'spaces'), { recursive: true, force: true });
+    const r = runReport({ startDir: f.root, sessionsRoot: f.sessionsRoot });
+    assert.equal(r.exitCode, 1);
+    assert.match(r.stderr, /^No AI-DLC intents found in /);
   } finally {
     f.cleanup();
   }
@@ -84,33 +166,35 @@ test('FR6.2/BR2.1: no sessions folder stops with message and exit 1', () => {
   }
 });
 
-test('FR6.2/BR1.2: no active intent stops with message and exit 1', () => {
+test('FR1: report needs no active intent', () => {
   const f = fixture({ noIntent: true });
   try {
     const r = runReport({ startDir: f.root, sessionsRoot: f.sessionsRoot, now: NOW });
-    assert.equal(r.exitCode, 1);
-    assert.equal(
-      r.stderr,
-      `No active AI-DLC intent found at ${join(f.root, 'aidlc', 'spaces', 'default', 'intents', 'active-intent')}.`,
-    );
+    assert.equal(r.exitCode, 0);
+    assert.match(r.stdout, /TOTAL\s+3\.750/);
+    // export still needs it
+    const e = runExport({ startDir: f.root, sessionsRoot: f.sessionsRoot, file: 'o.json', person: 'a', now: NOW, toolVersion: '1' });
+    assert.equal(e.exitCode, 1);
+    assert.match(e.stderr, /^No active AI-DLC intent found at /);
   } finally {
     f.cleanup();
   }
 });
 
-test('FR6.2/BR2.1: no audit file stops with message and exit 1', () => {
+test('FR6.2/BR2.1: no audit file for any intent stops with message and exit 1', () => {
   const f = fixture({ noAudit: true });
   try {
     const r = runReport({ startDir: f.root, sessionsRoot: f.sessionsRoot, now: NOW });
     assert.equal(r.exitCode, 1);
     assert.equal(
       r.stderr,
-      `No audit file found in ${join(f.root, 'aidlc', 'spaces', 'default', 'intents', 'i-1', 'audit')}.`,
+      `No audit file found for any intent in ${join(f.root, 'aidlc', 'spaces', 'default', 'intents')}.`,
     );
   } finally {
     f.cleanup();
   }
 });
+
 
 test('FR6.2/BR2.1: no session for the project stops with message and exit 1', () => {
   const f = fixture({ noSession: true });

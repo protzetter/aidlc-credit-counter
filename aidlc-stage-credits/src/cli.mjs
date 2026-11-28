@@ -6,7 +6,7 @@ import { runCombine, runExport, runReport } from './actions.mjs';
 /** Usage text shown for an unknown action or a bad option. */
 export const USAGE = [
   'Usage:',
-  '  aidlc-stage-credits [report]',
+  '  aidlc-stage-credits [report] [--intent <name>]...',
   '  aidlc-stage-credits export <file.json|file.csv> [--person <name>] [--force]',
   '  aidlc-stage-credits combine <file>...',
 ].join('\n');
@@ -34,9 +34,22 @@ export function main(argv, env) {
   if (action === '--help' || action === '-h') return { stdout: USAGE, stderr: '', exitCode: 0 };
   const common = { startDir: env.cwd, sessionsRoot: env.sessionsRoot, now: env.now };
 
-  if (action === 'report') {
-    if (rest.length > 0) return usageError(`Unexpected argument: ${rest[0]}`);
-    return runReport(common);
+  if (action === 'report' || action === '--intent' || action.startsWith('--intent=')) {
+    // No action word before --intent means report, as with no arguments at all.
+    const args = action === 'report' ? rest : [action, ...rest];
+    const intents = [];
+    for (let i = 0; i < args.length; i++) {
+      const a = args[i];
+      if (a === '--intent') {
+        if (i + 1 >= args.length) return usageError('--intent needs a name.');
+        intents.push(args[++i]);
+      } else if (a.startsWith('--intent=')) {
+        const v = a.slice('--intent='.length);
+        if (v === '') return usageError('--intent needs a name.');
+        intents.push(v);
+      } else return usageError(`Unexpected argument: ${a}`);
+    }
+    return runReport({ ...common, intents });
   }
 
   if (action === 'export') {

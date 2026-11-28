@@ -10,6 +10,8 @@ import {
   readAudit,
   findSessions,
   readCreditRecords,
+  listIntents,
+  readIntentAudits,
 } from '../src/project.mjs';
 
 function scratch() {
@@ -138,5 +140,51 @@ test('BR1.4: a chat started before the project folder was renamed is matched by 
   } finally {
     rmSync(root, { recursive: true, force: true });
     rmSync(sessions, { recursive: true, force: true });
+  }
+});
+
+test('FR1.1: intents are listed from intents.json (dirName, in file order)', () => {
+  const root = scratch();
+  try {
+    const dir = join(root, 'aidlc', 'spaces', 'default', 'intents');
+    mkdirSync(join(dir, 'zzz-folder-not-listed'), { recursive: true });
+    put(
+      join(dir, 'intents.json'),
+      JSON.stringify([{ dirName: 'b-intent' }, { dirName: 'a-intent' }, { slug: 'no-dir' }, { dirName: 'b-intent' }]),
+    );
+    assert.deepEqual(listIntents(root, 'default'), ['b-intent', 'a-intent']);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('FR1.1: without a readable intents.json the intent folders are listed, dot folders skipped', () => {
+  const root = scratch();
+  try {
+    const dir = join(root, 'aidlc', 'spaces', 'default', 'intents');
+    mkdirSync(join(dir, 'b'), { recursive: true });
+    mkdirSync(join(dir, 'a'));
+    mkdirSync(join(dir, '.aidlc-engine'));
+    put(join(dir, 'active-intent'), 'a');
+    assert.deepEqual(listIntents(root, 'default'), ['a', 'b']);
+    put(join(dir, 'intents.json'), '{broken');
+    assert.deepEqual(listIntents(root, 'default'), ['a', 'b']);
+    assert.deepEqual(listIntents(root, 'no-such-space'), []);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('FR1.3: an intent with no audit file is reported as missing, the others are read', () => {
+  const root = scratch();
+  try {
+    const dir = join(root, 'aidlc', 'spaces', 'default', 'intents');
+    put(join(dir, 'with', 'audit', 'a.md'), 'AAA');
+    mkdirSync(join(dir, 'without', 'audit'), { recursive: true });
+    const r = readIntentAudits(root, 'default', ['with', 'without', 'absent']);
+    assert.deepEqual(r.audits, [{ intent: 'with', text: 'AAA' }]);
+    assert.deepEqual(r.missing, ['without', 'absent']);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
   }
 });

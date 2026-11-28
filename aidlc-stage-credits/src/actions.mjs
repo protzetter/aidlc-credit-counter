@@ -6,15 +6,18 @@ import { userInfo } from 'node:os';
 import { resolve } from 'node:path';
 import { OUTSIDE, attribute, formatReport, parseStageWindows } from './lib.mjs';
 import { buildExport, parseExport, serializeExport } from './exportfile.mjs';
+import { attributeIntents, formatIntentsReport } from './intents.mjs';
 import {
   findProjectRoot,
   findSessions,
   folderExists,
   intentsDir,
+  listIntents,
   readActiveIntent,
   readActiveSpace,
   readAudit,
   readCreditRecords,
+  readIntentAudits,
 } from './project.mjs';
 
 const fail = (message, exitCode = 1) => ({ stdout: '', stderr: message, exitCode });
@@ -53,15 +56,42 @@ function reportText(run) {
 }
 
 /**
- * Report action: the per-stage table for the active intent. Writes nothing.
- * @param {{startDir:string, sessionsRoot:string, now?:number}} opts
+ * Report action: one combined table (intent, stage, credits) for all intents of the active space,
+ * or only the named ones. Writes nothing. A warning for an intent left out (no audit file) goes to
+ * stderr, so the table on stdout stays clean.
+ * @param {{startDir:string, sessionsRoot:string, intents?:string[], now?:number}} opts
  * @returns {{stdout:string, stderr:string, exitCode:number}}
  */
-export function runReport({ startDir, sessionsRoot, now = Date.now() }) {
-  const run = collectRun({ startDir, sessionsRoot, now });
-  if ('error' in run) return fail(run.error);
-  return { stdout: reportText(run), stderr: '', exitCode: 0 };
+export function runReport({ startDir, sessionsRoot, intents = [] }) {
+  const root = findProjectRoot(startDir);
+  if (root === null) return fail(`No AI-DLC project found at or above ${startDir}.`);
+  if (!folderExists(sessionsRoot)) return fail(`No Kiro data found: ${sessionsRoot} does not exist.`);
+  const space = readActiveSpace(root);
+  const existing = listIntents(root, space);
+  if (existing.length === 0) return fail(`No AI-DLC intents found in ${intentsDir(root, space)}.`);
+  const unknown = intents.filter((n) => !existing.includes(n));
+  if (unknown.length > 0) {
+    return fail(`Unknown intent: ${unknown.join(', ')}. Intents that exist: ${existing.join(', ')}.`);
+  }
+  const selected = intents.length === 0 ? existing : existing.filter((n) => intents.includes(n));
+  const { audits, missing } = readIntentAudits(root, space, selected);
+  if (audits.length === 0) {
+    return fail(`No audit file found for any intent in ${intentsDir(root, space)}.`);
+  }
+  const sessions = findSessions(sessionsRoot, root);
+  if (sessions.length === 0) return fail(`No Kiro sessions found for ${root} in ${sessionsRoot}.`);
+  const records = readCreditRecords(sessions);
+  const totals = attributeIntents(audits, records);
+  const warnings = missing.map((n) => `Warning: intent ${n} has no audit file and is left out.`).join('\n');
+  return {
+    stdout:
+      `Intents: ${audits.length}   Sessions: ${sessions.length}   Credit records: ${records.length}\n` +
+      formatIntentsReport(totals),
+    stderr: warnings,
+    exitCode: 0,
+  };
 }
+
 
 function osUserName() {
   try {

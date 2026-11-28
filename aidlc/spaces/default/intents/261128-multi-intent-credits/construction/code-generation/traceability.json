@@ -1,0 +1,16 @@
+{
+  "stage": "code-generation",
+  "upstream_ids": ["FR1.1", "FR1.2", "FR1.3", "FR2.1", "FR2.2", "FR2.3", "FR3", "FR4", "NFR1", "NFR2"],
+  "coverage": [
+    { "id": "FR1.1", "status": "OK", "target": "aidlc-stage-credits/src/project.mjs" },
+    { "id": "FR1.2", "status": "OK", "target": "aidlc-stage-credits/src/cli.mjs" },
+    { "id": "FR1.3", "status": "OK", "target": "aidlc-stage-credits/src/actions.mjs" },
+    { "id": "FR2.1", "status": "OK", "target": "aidlc-stage-credits/src/intents.mjs" },
+    { "id": "FR2.2", "status": "OK", "target": "aidlc-stage-credits/src/intents.mjs" },
+    { "id": "FR2.3", "status": "OK", "target": "aidlc-stage-credits/src/intents.mjs" },
+    { "id": "FR3", "status": "OK", "target": "aidlc-stage-credits/src/actions.mjs" },
+    { "id": "FR4", "status": "OK", "target": "aidlc-stage-credits/test/actions.test.mjs" },
+    { "id": "NFR1", "status": "OK", "target": "aidlc-stage-credits/test/intents.test.mjs" },
+    { "id": "NFR2", "status": "OK", "target": "aidlc-stage-credits/test/actions.test.mjs" }
+  ]
+}
